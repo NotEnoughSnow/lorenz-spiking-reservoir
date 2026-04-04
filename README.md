@@ -8,15 +8,15 @@ All neuron definitions, reservoir definitions, and learning rules include formal
 
 ## Notebooks
 
-- [1. Neurons](./notebooks/1._neurons.ipynb) — Defines and simulates the core neuron models: LIF and ALIF. Includes formal equations, parameter descriptions, and visualizations of neuron dynamics under input, including membrane potential evolution, spiking behavior, and threshold adaptation.
+- [1. Neurons](./notebooks/1._neurons.ipynb) - Defines and simulates the core neuron models: LIF and ALIF. Includes formal equations, parameter descriptions, and visualizations of neuron dynamics under input, including membrane potential evolution, spiking behavior, and threshold adaptation.
 
-- [2. Reservoir](./notebooks/2._reservoir.ipynb) — Defines the reservoir architecture: a fixed randomly connected recurrent network of LIF neurons. Covers weight matrix initialization, spectral radius scaling, and recurrent LIF dynamics.
+- [2. Reservoir](./notebooks/2._reservoir.ipynb) - Defines the reservoir architecture: a fixed randomly connected recurrent network of LIF neurons. Covers weight matrix initialization, spectral radius scaling, and recurrent LIF dynamics [1,2].
 
-- [3. Lorenz](./notebooks/3._lorenz.ipynb) — Uses the reservoir to predict the Lorenz attractor trajectory. Covers trajectory generation, input encoding, reservoir state collection, and offline readout training via ridge regression and least squares. Includes NRMSE evaluation and trajectory visualization.
+- [3. Lorenz](./notebooks/3._lorenz.ipynb) - Uses the reservoir to predict the Lorenz attractor trajectory. Covers trajectory generation, input encoding, reservoir state collection, and offline readout training via ridge regression and least squares. Includes NRMSE evaluation and trajectory visualization.
 
-- [4. Lorenz — Spectral Radius Sweep](./notebooks/4._lorenz_spectral.ipynb) — Trains and evaluates the reservoir across a range of spectral radii. Visualizes how prediction error varies with spectral radius and discusses the results.
+- [4. Lorenz Spectral Radius Sweep](./notebooks/4._lorenz_spectral.ipynb) - Trains and evaluates the reservoir across a range of spectral radii. Visualizes how prediction error varies with spectral radius and discusses the results.
 
-- [5. Lorenz — Simplified e-prop](./notebooks/5._lorenz_RSTDP.ipynb) — Replaces offline readout training with an online bio-plausible learning rule based on eligibility traces, inspired by e-prop. Includes a training loss curve and NRMSE evaluation.
+- [5. Lorenz R-STDP (Presynaptic Variant)](./notebooks/5._lorenz_RSTDP.ipynb) - Replaces offline readout training with an online, bio-plausible learning rule based on Reward-Modulated STDP (R-STDP) [3]. Only the readout weights are updated; the reservoir remains fixed. Uses a presynaptic-only eligibility trace. Includes a training loss curve and NRMSE evaluation.
 
 ---
 
@@ -53,13 +53,16 @@ note: The input weights $W_{in}$ and the spectral radius effectively compete in 
 
 ---
 
-### Online Learning Curve (Simplified e-prop)
+### Online Learning Curve (R-STDP)
 
-The plot below shows the training loss curve for the online eligibility trace learning rule.
+The plot below shows the training loss curve for the online R-STDP learning rule.
 
-![e-prop learning curve](./media/RSTDP.png)
+![R-STDP learning curve](./media/RSTDP.png)
 
-The loss oscillates but stabilizes over training, which is expected given the chaotic nature of the target signal and the noisy spiking activity used for the gradient estimate. The error stabilizes around 0.2, consistent with the NRMSE scores reported below.
+The loss oscillates but trends downward over training, which is expected given
+the chaotic nature of the target signal and the noisy, binary spike activity used in place of exact gradients. The error stabilizes around 0.2 after sufficient training steps, consistent with the NRMSE scores reported in the comparison table below.
+
+A full R-STDP formulation would additionally include a postsynaptic factor in the eligibility trace, conditioning each synaptic update on the co-activity of both the presynaptic reservoir neuron and the postsynaptic readout unit [1]. This extension was attempted but produced unstable training dynamics on this task, likely due to unbounded growth in the trace when the continuous-valued readout output enters the Hebbian product. The presynaptic-only variant is therefore retained as the working implementation.
 
 ---
 
@@ -67,8 +70,8 @@ The loss oscillates but stabilizes over training, which is expected given the ch
 
 | Method | Online | Bio-plausible | NRMSE (x / y / z) |
 |---|---|---|---|
-| Ridge Regression | No | No | **0.245** / **0.378** / 0.452 |
-| Simplified e-prop | Yes | Partially | 0.411 / 0.387 / **0.439** |
+| Ridge Regression | No | No | **0.252** / **0.362** / **0.460** |
+| Simplified e-prop | Yes | Partially | 0.453 / 0.471 / 0.462 |
 
 Ridge regression achieves lower error overall. The simplified e-prop rule trades some prediction accuracy for an online, incrementally updated process that does not require storing the full spike record, which is the relevant constraint for neuromorphic deployment.
 
@@ -78,7 +81,6 @@ Ridge regression achieves lower error overall. The simplified e-prop rule trades
 I plan on:
 
 - Implement more online, bio-plausible methods, and compare them with existing results (like FORCE).
-- Improve on existing e-prop implementation, and study the more faithful variation, as well as any other recent variations.
 - Compare ALIF vs LIF performance.
 - Perform more experiments on error vs SR, and determine the ideal parameters and conditions (while finding proper justifications for why they allow the network to behave as such)
 
@@ -90,3 +92,12 @@ I plan on:
 - This is an ongoing project, built incrementally as concepts are studied and implemented.
 - Neuron equations, reservoir formulation, and learning rules are formally defined with equations in their respective notebooks.
 - The e-prop implementation is a simplified variant. A full e-prop implementation would additionally propagate learning signals through the recurrent weights using approximated gradients, which is not done here.
+
+
+## References
+
+[1] Jaeger, Herbert. (2001). The" echo state" approach to analysing and training recurrent neural networks-with an erratum note'. Bonn, Germany: German National Research Center for Information Technology GMD Technical Report. 148. 
+
+[2] Lukoševičius, M. (2012). A practical guide to applying echo state networks. In Neural Networks: Tricks of the Trade: Second Edition (pp. 659-686). Berlin, Heidelberg: Springer Berlin Heidelberg.
+
+[3] Legenstein, R., Pecevski, D., & Maass, W. (2008). A learning theory for reward-modulated spike-timing-dependent plasticity with application to biofeedback. *PLOS Computational Biology*, 4(10), e1000180.
